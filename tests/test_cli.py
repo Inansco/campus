@@ -45,7 +45,7 @@ class CliTests(unittest.TestCase):
 
     def test_invalid_main_menu_retries(self):
         lines = []
-        run_menu([], None, scripted_input("invalid", "0"), lines.append)
+        run_menu([], scripted_input("invalid", "0"), lines.append)
         self.assertTrue(any("Invalid option" in line for line in lines))
 
     def test_view_notes(self):
