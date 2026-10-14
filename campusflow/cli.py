@@ -110,7 +110,7 @@ def add_note_menu(tickets, add_note_fn, input_fn=input, output_fn=print):
     return note
 
 
-def run_menu(tickets, add_note_fn=None, input_fn=input, output_fn=print):
+def run_menu(tickets, input_fn=input, output_fn=print, add_note_fn=None):
     """Run Engineer B views against a supplied ticket collection."""
     while True:
         output_fn("\n1. Search Tickets\n2. Ticket Reports\n3. Add Ticket Note\n4. View Ticket Notes\n0. Exit")
