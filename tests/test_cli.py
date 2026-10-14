@@ -1,12 +1,15 @@
-"""CLI tests use injected input/output so no manual typing is required."""
+"""Engineer B CLI tests with simulated input/output."""
 import unittest
-from campusflow.cli import choose_filter, search_menu, report_menu, run_menu
+from campusflow.cli import (
+    add_note_menu, choose_filter, report_menu, run_menu, search_menu, view_notes_menu,
+)
 
 TICKETS = [
     {"id": "T001", "title": "Wi-Fi outage", "category": "Network",
-     "priority": "critical", "status": "open", "assigned_to": None},
+     "priority": "critical", "status": "open", "assigned_to": None,
+     "notes": [{"id": "N001", "text": "Router checked"}]},
     {"id": "T002", "title": "Laptop broken", "category": "Hardware",
-     "priority": "medium", "status": "resolved", "assigned_to": "Ada"},
+     "priority": "medium", "status": "resolved", "assigned_to": "Ada", "notes": []},
 ]
 
 
@@ -42,8 +45,48 @@ class CliTests(unittest.TestCase):
 
     def test_invalid_main_menu_retries(self):
         lines = []
-        run_menu([], scripted_input("invalid", "0"), lines.append)
+        run_menu([], None, scripted_input("invalid", "0"), lines.append)
         self.assertTrue(any("Invalid option" in line for line in lines))
+
+    def test_view_notes(self):
+        lines = []
+        notes = view_notes_menu(TICKETS, scripted_input("t001"), lines.append)
+        self.assertEqual(notes[0]["id"], "N001")
+        self.assertTrue(any("Router checked" in line for line in lines))
+
+    def test_view_notes_unknown_ticket(self):
+        lines = []
+        self.assertEqual(view_notes_menu(TICKETS, scripted_input("T999"), lines.append), [])
+        self.assertIn("Ticket not found.", lines)
+
+    def test_add_note_delegates_to_engineer_a_api(self):
+        calls = []
+        def fake_add(ticket_id, text):
+            calls.append((ticket_id, text))
+            return {"id": "N002", "text": text}
+        lines = []
+        note = add_note_menu(TICKETS, fake_add, scripted_input("T001", "Restart requested"), lines.append)
+        self.assertEqual(calls, [("T001", "Restart requested")])
+        self.assertEqual(note["id"], "N002")
+        self.assertIn("Note added.", lines)
+
+    def test_add_note_rejects_empty_text(self):
+        calls = []
+        lines = []
+        result = add_note_menu(TICKETS, lambda *args: calls.append(args),
+                               scripted_input("T001", "   "), lines.append)
+        self.assertIsNone(result)
+        self.assertEqual(calls, [])
+        self.assertIn("Note cannot be empty.", lines)
+
+    def test_add_note_handles_service_error(self):
+        def broken_service(ticket_id, text):
+            raise ValueError("invalid note")
+        lines = []
+        result = add_note_menu(TICKETS, broken_service,
+                               scripted_input("T001", "hello"), lines.append)
+        self.assertIsNone(result)
+        self.assertTrue(any("Could not add note" in line for line in lines))
 
 
 if __name__ == "__main__":
